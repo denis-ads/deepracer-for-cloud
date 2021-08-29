@@ -49,10 +49,11 @@ esac
 done
 
 # Ensure Sagemaker's folder is there
-if [ ! -d /tmp/sagemaker ]; then
-  sudo mkdir -p /tmp/sagemaker
-  sudo chmod -R g+w /tmp/sagemaker
-fi
+# avaliar melhor devido a erro de permissao no mac
+# if [ ! -d $DR_DIRtmp/sagemaker ]; then
+#   sudo mkdir -p $DR_DIR/tmp/sagemaker
+#   sudo chmod -R g+w /tmp/sagemaker
+# fi
 
 #Check if files are available
 S3_PATH="s3://$DR_LOCAL_S3_BUCKET/$DR_LOCAL_S3_MODEL_PREFIX"
@@ -71,7 +72,7 @@ then
 fi
 
 # Base compose file
-if [ ${DR_ROBOMAKER_MOUNT_LOGS,,} = "true" ];
+if [ ${DR_ROBOMAKER_MOUNT_LOGS} = "true" ];
 then
   COMPOSE_FILES="$DR_TRAIN_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DR_DIR/docker/docker-compose-mount.yml"
   export DR_MOUNT_DIR="$DR_DIR/data/logs/robomaker/$DR_LOCAL_S3_MODEL_PREFIX"
@@ -90,7 +91,7 @@ WORKER_CONFIG=$(python3 $DR_DIR/scripts/training/prepare-config.py)
 if [ "$DR_WORKERS" -gt 1 ]; then
   echo "Starting $DR_WORKERS workers"
 
-  if [[ "${DR_DOCKER_STYLE,,}" != "swarm" ]];
+  if [[ "${DR_DOCKER_STYLE}" != "swarm" ]];
   then
     mkdir -p $DR_DIR/tmp/comms.$DR_RUN_ID
     rm -rf $DR_DIR/tmp/comms.$DR_RUN_ID/*
@@ -111,7 +112,7 @@ else
 fi
 
 # Check if we are using Host X -- ensure variables are populated
-if [[ "${DR_HOST_X,,}" == "true" ]];
+if [[ "${DR_HOST_X}" == "true" ]];
 then
   if [[ -n "$DR_DISPLAY" ]]; then
     ROBO_DISPLAY=$DR_DISPLAY
@@ -135,7 +136,7 @@ then
 fi
 
 # Check if we will use Docker Swarm or Docker Compose
-if [[ "${DR_DOCKER_STYLE,,}" == "swarm" ]];
+if [[ "${DR_DOCKER_STYLE}" == "swarm" ]];
 then
   ROBOMAKER_NODES=$(docker node ls --format '{{.ID}}' | xargs docker inspect | jq '.[] | select (.Spec.Labels.Robomaker == "true") | .ID' | wc -l)
   if [[ "$ROBOMAKER_NODES" -eq 0 ]]; 
@@ -153,9 +154,11 @@ then
     exit 0
   fi
 
+  echo "1-denis $ROBO_DISPLAY docker stack deploy $COMPOSE_FILES $STACK_NAME"
   DISPLAY=$ROBO_DISPLAY docker stack deploy $COMPOSE_FILES $STACK_NAME
 
 else
+  echo "2-denis:  $ROBO_DISPLAY docker-compose $COMPOSE_FILES -p $STACK_NAME --log-level ERROR up -d --scale robomaker=$DR_WORKERS"
   DISPLAY=$ROBO_DISPLAY docker-compose $COMPOSE_FILES -p $STACK_NAME --log-level ERROR up -d --scale robomaker=$DR_WORKERS
 fi
 
@@ -164,20 +167,27 @@ if [ -n "$OPT_QUIET" ]; then
   exit 0
 fi
 
+echo "Chegou aqui: ${OPT_DISPLAY} -- ${DISPLAY} -- ${DR_HOST_X}"
+
 # Trigger requested log-file
-if [[ "${OPT_DISPLAY,,}" == "all" && -n "${DISPLAY}" && "${DR_HOST_X,,}" == "true" ]]; then
+if [[ "${OPT_DISPLAY}" == "all" && -n "${DISPLAY}" && "${DR_HOST_X}" == "true" ]]; then
+  echo "dr-logs-sagemaker -w 15"
   dr-logs-sagemaker -w 15
   if [ "${DR_WORKERS}" -gt 1 ]; then
+    echo "if: ${DR_WORKERS}"
     for i in $(seq 1 ${DR_WORKERS})
     do
       dr-logs-robomaker -w 15 -n $i
     done    
   else
+    echo "else: dr-logs-robomaker -w 15"
     dr-logs-robomaker -w 15
   fi
-elif [[ "${OPT_DISPLAY,,}" == "robomaker" ]]; then
+elif [[ "${OPT_DISPLAY}" == "ROBOMAKER" ]]; then
+  echo " ggg  ${OPT_DISPLAY}"
   dr-logs-robomaker -w 15 -n $OPT_ROBOMAKER
-elif [[ "${OPT_DISPLAY,,}" == "sagemaker" ]]; then
+elif [[ "${OPT_DISPLAY}" == "SAGEMAKER" ]]; then
+  echo " hhhh  ${OPT_DISPLAY}"
   dr-logs-sagemaker -w 15
 fi
 

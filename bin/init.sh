@@ -36,38 +36,42 @@ fi
 # Find CPU Level
 CPU_LEVEL="cpu-avx"
 
-if [[ -f /proc/cpuinfo ]] && [[ "$(cat /proc/cpuinfo | grep avx2 | wc -l)" > 0 ]]; then
-    CPU_LEVEL="cpu-avx2"
-elif [[ "$(type sysctl 2> /dev/null)" ]] && [[ "$(sysctl -n hw.optional.avx2_0)" == 1 ]]; then
-    CPU_LEVEL="cpu-avx2"
-fi
+# if [[ -f /proc/cpuinfo ]] && [[ "$(cat /proc/cpuinfo | grep avx2 | wc -l)" > 0 ]]; then
+#     CPU_LEVEL="cpu-avx2"
+# elif [[ "$(type sysctl 2> /dev/null)" ]] && [[ "$(sysctl -n hw.optional.avx2_0)" == 1 ]]; then
+#     CPU_LEVEL="cpu-avx2"
+# fi
 
 # Check if Intel (to ensure MKN)
-if [[ -f /proc/cpuinfo ]] && [[ "$(cat /proc/cpuinfo | grep GenuineIntel | wc -l)" > 0 ]]; then
-    CPU_INTEL="true"
-elif [[ "$(type sysctl 2> /dev/null)" ]] && [[ "$(sysctl -n machdep.cpu.vendor)" == "GenuineIntel" ]]; then
-    CPU_INTEL="true"
-fi
+# if [[ -f /proc/cpuinfo ]] && [[ "$(cat /proc/cpuinfo | grep GenuineIntel | wc -l)" > 0 ]]; then
+#     CPU_INTEL="true"
+# elif [[ "$(type sysctl 2> /dev/null)" ]] && [[ "$(sysctl -n machdep.cpu.vendor)" == "GenuineIntel" ]]; then
+#     CPU_INTEL="true"
+# fi
+CPU_INTEL="true"
 
 # Check GPU
-if [[ "${OPT_ARCH}" == "gpu" ]]
-then
-    docker build -t local/gputest - < $INSTALL_DIR/utils/Dockerfile.gpu-detect 
-    GPUS=$(docker run --rm --gpus all local/gputest 2> /dev/null | awk  '/Device: ./' | wc -l )
-    if [ $? -ne 0 ] || [ $GPUS -eq 0 ]
-    then
-        echo "No GPU detected in docker. Using CPU".
-        OPT_ARCH="cpu-avx"
-    fi
-fi
-
+    # if [[ "${OPT_ARCH}" == "gpu" ]]
+    # then
+    #     echo "denis docker build -t local/gputest - < $INSTALL_DIR/utils/Dockerfile.gpu-detect "
+    #     docker build -t local/gputest - < $INSTALL_DIR/utils/Dockerfile.gpu-detect 
+    #     GPUS=$(docker run --rm --gpus all local/gputest 2> /dev/null | awk  '/Device: ./' | wc -l )
+    #     if [ $? -ne 0 ] || [ $GPUS -eq 0 ]
+    #     then
+    #         echo "No GPU detected in docker. Using CPU".
+    #         OPT_ARCH="cpu-avx"
+    #     fi
+    # fi
+#GPUS=1
 cd $INSTALL_DIR
 
 # create directory structure for docker volumes
 mkdir -p $INSTALL_DIR/data $INSTALL_DIR/data/minio $INSTALL_DIR/data/minio/bucket 
 mkdir -p $INSTALL_DIR/data/logs $INSTALL_DIR/data/analysis $INSTALL_DIR/tmp
-sudo mkdir -p /tmp/sagemaker
-sudo chmod -R g+w /tmp/sagemaker
+# estou criando manualmente, avaliar melhor, deu problema de permissao ao rodar pelo script.
+# talvez rodar o script com sudo ?
+#sudo mkdir -p /tmp/sagemaker
+#sudo chmod -R g+w /tmp/sagemaker
 
 # create symlink to current user's home .aws directory 
 # NOTE: AWS cli must be installed for this to work
@@ -81,42 +85,44 @@ cp $INSTALL_DIR/defaults/hyperparameters.json $INSTALL_DIR/custom_files/
 cp $INSTALL_DIR/defaults/model_metadata.json $INSTALL_DIR/custom_files/
 cp $INSTALL_DIR/defaults/reward_function.py $INSTALL_DIR/custom_files/
 
-cp $INSTALL_DIR/defaults/template-system.env $INSTALL_DIR/system.env
-cp $INSTALL_DIR/defaults/template-run.env $INSTALL_DIR/run.env
-if [[ "${OPT_CLOUD}" == "aws" ]]; then
-    AWS_EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
-    AWS_REGION="`echo \"$AWS_EC2_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
-    sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
-    sed -i "s/<LOCAL_PROFILE>/default/g" $INSTALL_DIR/system.env
-elif [[ "${OPT_CLOUD}" == "azure" ]]; then
-    AWS_REGION="us-east-1"
-    sed -i "s/<LOCAL_PROFILE>/azure/g" $INSTALL_DIR/system.env
-    sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
-    echo "Please run 'aws configure --profile azure' to set the credentials"
-elif [[ "${OPT_CLOUD}" == "remote" ]]; then
-    AWS_REGION="us-east-1"
-    sed -i "s/<LOCAL_PROFILE>/minio/g" $INSTALL_DIR/system.env
-    sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
-    echo "Please run 'aws configure --profile minio' to set the credentials"
-    echo "Please define DR_REMOTE_MINIO_URL in system.env to point to remote minio instance."
-else
-    AWS_REGION="us-east-1"
-    sed -i "s/<LOCAL_PROFILE>/minio/g" $INSTALL_DIR/system.env
-    sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
-    echo "Please run 'aws configure --profile minio' to set the credentials"
-fi
-sed -i "s/<AWS_DR_BUCKET_ROLE>/to-be-defined/g" $INSTALL_DIR/system.env
-sed -i "s/<CLOUD_REPLACE>/$OPT_CLOUD/g" $INSTALL_DIR/system.env
-sed -i "s/<REGION_REPLACE>/$AWS_REGION/g" $INSTALL_DIR/system.env
+#comentei pq nao queria que ficasse atualizando os arquivos e pq o sed dá erro no mac
+# cp $INSTALL_DIR/defaults/template-system.env $INSTALL_DIR/system.env
+# cp $INSTALL_DIR/defaults/template-run.env $INSTALL_DIR/run.env
+# if [[ "${OPT_CLOUD}" == "aws" ]]; then
+#     AWS_EC2_AVAIL_ZONE=`curl -s http://169.254.169.254/latest/meta-data/placement/availability-zone`
+#     AWS_REGION="`echo \"$AWS_EC2_AVAIL_ZONE\" | sed 's/[a-z]$//'`"
+#     sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
+#     sed -i "s/<LOCAL_PROFILE>/default/g" $INSTALL_DIR/system.env
+# elif [[ "${OPT_CLOUD}" == "azure" ]]; then
+#     AWS_REGION="us-east-1"
+#     sed -i "s/<LOCAL_PROFILE>/azure/g" $INSTALL_DIR/system.env
+#     sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
+#     echo "Please run 'aws configure --profile azure' to set the credentials"
+# elif [[ "${OPT_CLOUD}" == "remote" ]]; then
+#     AWS_REGION="us-east-1"
+#     sed -i "s/<LOCAL_PROFILE>/minio/g" $INSTALL_DIR/system.env
+#     sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
+#     echo "Please run 'aws configure --profile minio' to set the credentials"
+#     echo "Please define DR_REMOTE_MINIO_URL in system.env to point to remote minio instance."
+# else
+#     AWS_REGION="us-east-1"
+#     sed -i "s/<LOCAL_PROFILE>/minio/g" $INSTALL_DIR/system.env
+#     sed -i "s/<AWS_DR_BUCKET>/not-defined/g" $INSTALL_DIR/system.env
+#     echo "Please run 'aws configure --profile minio' to set the credentials"
+# fi
+# sed -i "s/<AWS_DR_BUCKET_ROLE>/to-be-defined/g" $INSTALL_DIR/system.env
+# sed -i "s/<CLOUD_REPLACE>/$OPT_CLOUD/g" $INSTALL_DIR/system.env
+# sed -i "s/<REGION_REPLACE>/$AWS_REGION/g" $INSTALL_DIR/system.env
 
-
-if [[ "${OPT_ARCH}" == "gpu" ]]; then
-    SAGEMAKER_TAG="gpu"   
-elif [[ -n "${CPU_INTEL}" ]]; then
-    SAGEMAKER_TAG="cpu-avx-mkl" 
-else
-    SAGEMAKER_TAG="cpu" 
-fi
+SAGEMAKER_TAG="cpu-avx-mkl" 
+# deixei fixo a tag do sagemaker
+# if [[ "${OPT_ARCH}" == "gpu" ]]; then
+#     SAGEMAKER_TAG="gpu"   
+# elif [[ -n "${CPU_INTEL}" ]]; then
+#     SAGEMAKER_TAG="cpu-avx-mkl" 
+# else
+#     SAGEMAKER_TAG="cpu" 
+# fi
 
 #set proxys if required
 for arg in "$@";
@@ -130,7 +136,8 @@ done
 
 # Download docker images. Change to build statements if locally built images are desired.
 COACH_VERSION=$(jq -r '.containers.rl_coach | select (.!=null)' $INSTALL_DIR/defaults/dependencies.json)
-sed -i "s/<COACH_TAG>/$COACH_VERSION/g" $INSTALL_DIR/system.env
+# comando com erro no mac, verificar melhor
+# sed -i "s/<COACH_TAG>/$COACH_VERSION/g" $INSTALL_DIR/system.env
 
 ROBOMAKER_VERSION=$(jq -r '.containers.robomaker  | select (.!=null)' $INSTALL_DIR/defaults/dependencies.json)
 if [ -n $ROBOMAKER_VERSION ]; then
@@ -138,7 +145,8 @@ if [ -n $ROBOMAKER_VERSION ]; then
 else   
     ROBOMAKER_VERSION=$CPU_LEVEL
 fi
-sed -i "s/<ROBO_TAG>/$ROBOMAKER_VERSION/g" $INSTALL_DIR/system.env
+# comando com erro no mac, verificar melhor
+# sed -i "s/<ROBO_TAG>/$ROBOMAKER_VERSION/g" $INSTALL_DIR/system.env
 
 SAGEMAKER_VERSION=$(jq -r '.containers.sagemaker  | select (.!=null)' $INSTALL_DIR/defaults/dependencies.json)
 if [ -n $SAGEMAKER_VERSION ]; then
@@ -146,27 +154,41 @@ if [ -n $SAGEMAKER_VERSION ]; then
 else   
     SAGEMAKER_VERSION=$SAGEMAKER_TAG
 fi
-sed -i "s/<SAGE_TAG>/$SAGEMAKER_VERSION/g" $INSTALL_DIR/system.env
+# comando com erro no mac, verificar melhor
+# sed -i "s/<SAGE_TAG>/$SAGEMAKER_VERSION/g" $INSTALL_DIR/system.env
 
 docker pull awsdeepracercommunity/deepracer-rlcoach:$COACH_VERSION
 docker pull awsdeepracercommunity/deepracer-robomaker:$ROBOMAKER_VERSION
 docker pull awsdeepracercommunity/deepracer-sagemaker:$SAGEMAKER_VERSION
 
+#usado para teste
+# docker swarm leave -f 
+
 # create the network sagemaker-local if it doesn't exit
 SAGEMAKER_NW='sagemaker-local'
-docker swarm init
+#para o ubuntu docker swarm init --advertise-addr 192.168.0.36
+# docker swarm init --advertise-addr 192.168.0.12
+#docker swarm init --advertise-addr 192.168.65.0
+# assim funcionou !!!!!
+docker swarm init 
 SWARM_NODE=$(docker node inspect self | jq .[0].ID -r)
+echo "SWARM_NODE: $SWARM_NODE"
 docker node update --label-add Sagemaker=true $SWARM_NODE
 docker node update --label-add Robomaker=true $SWARM_NODE
+
+echo "Denis chegou aqui"
 docker network ls | grep -q $SAGEMAKER_NW
 if [ $? -ne 0 ]
 then
+    echo "then: docker network create $SAGEMAKER_NW -d overlay --attachable --scope swarm"
     docker network create $SAGEMAKER_NW -d overlay --attachable --scope swarm
 else
+    echo "else: docker network create $SAGEMAKER_NW -d overlay --attachable --scope swarm"
     docker network rm $SAGEMAKER_NW
     docker network create $SAGEMAKER_NW -d overlay --attachable --scope swarm
 fi
 
+echo "Denis home: $HOME"
 # ensure our variables are set on startup - not for local setup.
 if [[ "${OPT_CLOUD}" != "local" ]]; then
     NUM_IN_PROFILE=$(cat $HOME/.profile | grep "$INSTALL_DIR/bin/activate.sh" | wc -l)
@@ -175,6 +197,7 @@ if [[ "${OPT_CLOUD}" != "local" ]]; then
     fi
 fi
 
+echo "install dir: $INSTALL_DIR"
 # mark as done
 date | tee $INSTALL_DIR/DONE
 
@@ -183,6 +206,7 @@ date | tee $INSTALL_DIR/DONE
 # you must pass s3_training_location.txt to this instance in order for this to work
 if [[ -f "$INSTALL_DIR/autorun.s3url" ]]
 then
+    echo "denis autorun"
     ## read in first line.  first line always assumed to be training location regardless what else is in file
     TRAINING_LOC=$(awk 'NR==1 {print; exit}' $INSTALL_DIR/autorun.s3url)
     
@@ -205,6 +229,7 @@ then
         aws s3 cp s3://$TRAINING_LOC/autorun.sh $INSTALL_DIR/bin/autorun.sh   
     fi
     chmod +x $INSTALL_DIR/bin/autorun.sh
+    echo "bash -c "source $INSTALL_DIR/bin/autorun.sh""
     bash -c "source $INSTALL_DIR/bin/autorun.sh"
 fi
 

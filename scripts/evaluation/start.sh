@@ -35,7 +35,7 @@ STACK_NAME="deepracer-eval-$DR_RUN_ID"
 export ROBOMAKER_COMMAND="./run.sh run evaluation.launch"
 export DR_CURRENT_PARAMS_FILE=${DR_LOCAL_S3_EVAL_PARAMS_FILE}
 
-if [ ${DR_ROBOMAKER_MOUNT_LOGS,,} = "true" ];
+if [ ${DR_ROBOMAKER_MOUNT_LOGS} = "true" ];
 then
   COMPOSE_FILES="$DR_EVAL_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DR_DIR/docker/docker-compose-mount.yml"
   export DR_MOUNT_DIR="$DR_DIR/data/logs/robomaker/$DR_LOCAL_S3_MODEL_PREFIX"
@@ -48,7 +48,7 @@ echo "Creating Robomaker configuration in $S3_PATH/$DR_CURRENT_PARAMS_FILE"
 python3 $DR_DIR/scripts/evaluation/prepare-config.py
 
 # Check if we are using Host X -- ensure variables are populated
-if [[ "${DR_HOST_X,,}" == "true" ]];
+if [[ "${DR_HOST_X}" == "true" ]];
 then
   if [[ -n "$DR_DISPLAY" ]]; then
     ROBO_DISPLAY=$DR_DISPLAY
@@ -72,7 +72,7 @@ fi
 
 
 # Check if we will use Docker Swarm or Docker Compose
-if [[ "${DR_DOCKER_STYLE,,}" == "swarm" ]];
+if [[ "${DR_DOCKER_STYLE}" == "swarm" ]];
 then
   DISPLAY=$ROBO_DISPLAY docker stack deploy $COMPOSE_FILES $STACK_NAME
 else

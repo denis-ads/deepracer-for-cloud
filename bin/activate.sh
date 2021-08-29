@@ -5,7 +5,7 @@ verlte() {
 }
 
 function dr-update-env {
-
+  echo "dr-update-env: "
   if [[ -f "$DIR/system.env" ]]
   then
     LINES=$(grep -v '^#' $DIR/system.env)
@@ -36,7 +36,7 @@ function dr-update-env {
     export DR_RUN_ID=0
   fi
 
-  if [[ "${DR_DOCKER_STYLE,,}" == "swarm" ]];
+  if [[ "${DR_DOCKER_STYLE}" == "swarm" ]];
   then
     export DR_ROBOMAKER_TRAIN_PORT=$(expr 8080 + $DR_RUN_ID)
     export DR_ROBOMAKER_EVAL_PORT=$(expr 8180 + $DR_RUN_ID)
@@ -55,7 +55,9 @@ export DR_DIR=$DIR
 
 if [[ -f "$1" ]];
 then
-  export DR_CONFIG=$(readlink -f $1)
+  # estava assim, vi em algum artigo que precisava mudar - 
+  # denis export DR_CONFIG=$(readlink -f $1)
+  export DR_CONFIG=$(greadlink -f $1)
   dr-update-env
 elif [[ -f "$DIR/run.env" ]];
 then
@@ -75,9 +77,10 @@ fi
 # If not defined then use Swarm
 if [[ -z "${DR_DOCKER_STYLE}" ]]; then
   export DR_DOCKER_STYLE="swarm"
+    echo "DR_DOCKER_STYLE: $DR_DOCKER_STYLE"
 fi
 
-if [[ "${DR_DOCKER_STYLE,,}" == "swarm" ]];
+if [[ "${DR_DOCKER_STYLE}" == "swarm" ]];
 then
   export DR_DOCKER_FILE_SEP="-c"
   SWARM_NODE=$(docker node inspect self | jq .[0].ID -r)
@@ -87,7 +90,7 @@ else
 fi
 
 # Prepare the docker compose files depending on parameters
-if [[ "${DR_CLOUD,,}" == "azure" ]];
+if [[ "${DR_CLOUD}" == "azure" ]];
 then
     export DR_LOCAL_S3_ENDPOINT_URL="http://localhost:9000"
     export DR_MINIO_URL="http://minio:9000"
@@ -95,7 +98,7 @@ then
     DR_TRAIN_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-training.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-endpoint.yml"
     DR_EVAL_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-eval.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-endpoint.yml"
     DR_MINIO_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-azure.yml"
-elif [[ "${DR_CLOUD,,}" == "local" ]];
+elif [[ "${DR_CLOUD}" == "local" ]];
 then
     export DR_LOCAL_S3_ENDPOINT_URL="http://localhost:9000"
     export DR_MINIO_URL="http://minio:9000"
@@ -103,7 +106,7 @@ then
     DR_TRAIN_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-training.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-endpoint.yml"
     DR_EVAL_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-eval.yml $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-endpoint.yml"
     DR_MINIO_COMPOSE_FILE="$DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-local.yml"
-elif [[ "${DR_CLOUD,,}" == "remote" ]];
+elif [[ "${DR_CLOUD}" == "remote" ]];
 then
     export DR_LOCAL_S3_ENDPOINT_URL="$DR_REMOTE_MINIO_URL"
     export DR_MINIO_URL="$DR_REMOTE_MINIO_URL"
@@ -118,21 +121,22 @@ else
 fi
 
 # Prevent docker swarms to restart
-if [[ "${DR_HOST_X,,}" == "true" ]];
+if [[ "${DR_HOST_X}" == "true" ]];
 then
     DR_TRAIN_COMPOSE_FILE="$DR_TRAIN_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-local-xorg.yml"
     DR_EVAL_COMPOSE_FILE="$DR_EVAL_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-local-xorg.yml"
 fi
 
 # Prevent docker swarms to restart
-if [[ "${DR_DOCKER_STYLE,,}" == "swarm" ]];
+if [[ "${DR_DOCKER_STYLE}" == "swarm" ]];
 then
+    echo "esse aqui ok"
     DR_TRAIN_COMPOSE_FILE="$DR_TRAIN_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-training-swarm.yml"
     DR_EVAL_COMPOSE_FILE="$DR_EVAL_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-eval-swarm.yml"
 fi
 
 # Enable logs in CloudWatch
-if [[ "${DR_CLOUD_WATCH_ENABLE,,}" == "true" ]]; then
+if [[ "${DR_CLOUD_WATCH_ENABLE}" == "true" ]]; then
     DR_TRAIN_COMPOSE_FILE="$DR_TRAIN_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-cwlog.yml"
     DR_EVAL_COMPOSE_FILE="$DR_EVAL_COMPOSE_FILE $DR_DOCKER_FILE_SEP $DIR/docker/docker-compose-cwlog.yml"
 fi
@@ -151,18 +155,34 @@ else
 fi
 
 export DR_TRAIN_COMPOSE_FILE
+echo "teste $DR_TRAIN_COMPOSE_FILE"
 export DR_EVAL_COMPOSE_FILE
 export DR_LOCAL_PROFILE_ENDPOINT_URL
 
 if [[ -n "${DR_MINIO_COMPOSE_FILE}" ]]; then
+    echo "1- $MINIO_ACCESS_KEY_FILE"
+    echo "2- $MINIO_SECRET_KEY_FILE"
+    echo "3- $MINIO_ROOT_USER_FILE"
+    echo "4- $MINIO_ROOT_PASSWORD_FILE"
+    echo "5- $MINIO_KMS_SECRET_KEY_FILE"
+    echo "6- $MINIO_UPDATE_MINISIGN_PUBKEY"
+    echo "7- $MINIO_CONFIG_ENV_FILE"
     export MINIO_UID=$(id -u)
     export MINIO_USERNAME=$(id -u -n)
-    export MINIO_GID=$(id -g)
+    export MINIO_GID=1000 #$(id -g)
     export MINIO_GROUPNAME=$(id -g -n)
-    if [[ "${DR_DOCKER_STYLE,,}" == "swarm" ]];
+
+    echo "8- $MINIO_UID"
+    echo "9- $MINIO_USERNAME"
+    echo "10- $MINIO_GID"
+    echo "11- $MINIO_GROUPNAME"
+
+    if [[ "${DR_DOCKER_STYLE}" == "swarm" ]];
     then
+        echo "denis activate: docker stack deploy $DR_MINIO_COMPOSE_FILE s3"
         docker stack deploy $DR_MINIO_COMPOSE_FILE s3
     else
+        echo "denis activate: docker-compose $DR_MINIO_COMPOSE_FILE -p s3 --log-level ERROR up -d"
         docker-compose $DR_MINIO_COMPOSE_FILE -p s3 --log-level ERROR up -d
     fi
 
@@ -172,6 +192,8 @@ fi
 DEPENDENCY_VERSION=$(jq -r '.master_version  | select (.!=null)' $DIR/defaults/dependencies.json)
 
 SAGEMAKER_VER=$(docker inspect awsdeepracercommunity/deepracer-sagemaker:$DR_SAGEMAKER_IMAGE 2> /dev/null | jq -r .[].Config.Labels.version)
+# denis- peguei local qdo fiz rebuild a imagem
+#$SAGEMAKER_VER=$(docker inspect local/deepracer-sagemaker:$DR_SAGEMAKER_IMAGE 2> /dev/null | jq -r .[].Config.Labels.version)
 if [ -z "$SAGEMAKER_VER" ]; then SAGEMAKER_VER=$DR_SAGEMAKER_IMAGE; fi
 if ! verlte $DEPENDENCY_VERSION $SAGEMAKER_VER; then
   echo "WARNING: Incompatible version of Deepracer Sagemaker. Expected >$DEPENDENCY_VERSION. Got $SAGEMAKER_VER."
@@ -192,9 +214,11 @@ fi
 source $SCRIPT_DIR/scripts_wrapper.sh
 
 function dr-update {
+  echo "dr-update"
    dr-update-env
 }
 
 function dr-reload {
+  echo "dr-reload: $DIR/bin/activate.sh $DR_CONFIG"
    source $DIR/bin/activate.sh $DR_CONFIG
 }

@@ -23,6 +23,7 @@ then
 	ARCH="cpu"
         echo "No NVIDIA GPU detected. Will not install drivers."
 else
+    echo "denis tem gpu $GPUS"
 	ARCH="gpu"
 fi
 
@@ -57,25 +58,39 @@ then
     fi
 fi
 
+## Adding Nvidia Drivers testes com o ubuntu 20
+#if [[ "${ARCH}" == "gpu" ]];
+#then
+#	sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/7fa2af80.pub
+#	sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
+#	sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64 /" > /etc/apt/sources.list.d/cuda_learn.list'
+	#sudo bash -c 'apt update && apt install -y nvidia-driver-440-server cuda-minimal-build-10-2 --no-install-recommends -o Dpkg::Options::="--force-overwrite"'
+    #sudo bash -c 'apt update && apt install -y nvidia-driver-390 cuda-minimal-build-11-4 --no-install-recommends -o Dpkg::Options::="--force-overwrite"'
+#    sudo bash -c 'apt update && apt install -y nvidia-driver-440-server cuda-minimal-build-11-4 --no-install-recommends -o Dpkg::Options::="--force-overwrite"'
+#fi
+
 ## Adding Nvidia Drivers
 if [[ "${ARCH}" == "gpu" ]];
 then
 	sudo apt-key adv --fetch-keys http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
 	sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda.list'
 	sudo bash -c 'echo "deb http://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64 /" > /etc/apt/sources.list.d/cuda_learn.list'
-	sudo bash -c 'apt update && apt install -y nvidia-driver-440-server cuda-minimal-build-10-2 --no-install-recommends -o Dpkg::Options::="--force-overwrite"'
+    sudo bash -c 'apt update && apt install -y nvidia-driver-440-server cuda-minimal-build-10-2 --no-install-recommends -o Dpkg::Options::="--force-overwrite"'
+	#sudo bash -c 'apt update && apt install -y nvidia-driver-440-server cuda-minimal-build-10-3 --no-install-recommends -o Dpkg::Options::="--force-overwrite"'
 fi
 
 ## Adding AWSCli
 sudo apt-get install -y awscli python3-boto3
 
-## Installing Docker
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-sudo add-apt-repository    "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-sudo apt-get update && sudo apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io
+## Installing Docker 
+# nao preciso.
+#curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+#sudo add-apt-repository    "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+#sudo apt-get update && sudo apt-get install -y --no-install-recommends docker-ce docker-ce-cli containerd.io
 
 if [[ "${ARCH}" == "gpu" ]];
 then
+    echo "denis entroiu aqui"
 	distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
 	curl -s -L https://nvidia.github.io/nvidia-docker/gpgkey | sudo apt-key add -
 	curl -s -L https://nvidia.github.io/nvidia-docker/$distribution/nvidia-docker.list | sudo tee /etc/apt/sources.list.d/nvidia-docker.list
@@ -83,7 +98,8 @@ then
 	sudo apt-get update && sudo apt-get install -y --no-install-recommends nvidia-docker2 nvidia-container-toolkit nvidia-container-runtime
 	cat /etc/docker/daemon.json | jq 'del(."default-runtime") + {"default-runtime": "nvidia"}' | sudo tee /etc/docker/daemon.json
 fi
-sudo systemctl enable docker
+# nao preciso
+#sudo systemctl enable docker
 sudo systemctl restart docker
 
 ## Ensure user can run docker

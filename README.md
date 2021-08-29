@@ -38,3 +38,39 @@ Full documentation can be found on the [Deepracer-for-Cloud GitHub Pages](https:
 
 * For general support it is suggested to join the [AWS DeepRacing Community](https://deepracing.io/). The Community Slack has a channel #dr-drfc-setup where the community provides active support.
 * Create a GitHub issue if you find an actual code issue, or where updates to documentation would be required.
+
+## Comandos importantes MACOS
+
+```
+conda create --name deepracer python=3.7
+conda activate deepracer
+pip install -U pandas urllib3==1.24.3  PyYAML==3.13 ipython boto3
+```
+
+```
+
+mkdir /tmp/sagemaker
+sudo chown MyUser /tmp/sagemaker/
+
+export MINIO_ROOT_USER=minioadmin
+export MINIO_ROOT_PASSWORD=minioadmin
+
+docker swarm leave -f
+
+./bin/init.sh -c local
+#ou - ./bin/init.sh -c local -a cpu
+
+source ./bin/activate.sh
+source ./bin/scripts_wrapper.sh
+
+dr-upload-custom-files
+
+dr-start-training -w 
+dr-start-viewer
+dr-update
+
+./bin/detect.sh
+./bin/detect.sh
+./scripts/training/start.sh
+
+```
